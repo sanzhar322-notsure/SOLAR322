@@ -5,7 +5,7 @@ export type IconName =
   | 'sun' | 'sky' | 'plan' | 'rhythm' | 'journal' | 'prism' | 'archive' | 'settings' | 'more'
   | 'refresh' | 'pin' | 'locate' | 'info' | 'warn' | 'error' | 'plus' | 'close' | 'check'
   | 'download' | 'upload' | 'trash' | 'calendar' | 'search' | 'chevron' | 'eye' | 'moon'
-  | 'cloud' | 'drop' | 'wind' | 'thermo' | 'shield' | 'flask' | 'edit' | 'bell' | 'offline';
+  | 'cloud' | 'drop' | 'wind' | 'thermo' | 'shield' | 'flask' | 'edit' | 'bell' | 'offline' | 'shanyrak' | 'history';
 
 const P: Record<IconName, ReactElement> = {
   sun: (<><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" /></>),
@@ -42,6 +42,8 @@ const P: Record<IconName, ReactElement> = {
   flask: (<><path d="M9.5 3h5M10 3v6L4.8 18.1A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.9L14 9V3" /><path d="M7.5 14.5h9" /></>),
   edit: (<><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z" /><path d="M14.5 7.5l2 2" /></>),
   bell: (<><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15l1.5-2Z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></>),
+  shanyrak: (<><circle cx="12" cy="12" r="9" /><path d="M4.6 8.6c2.4.9 4.4 1 7.4 1s5-.1 7.4-1M4.6 15.4c2.4-.9 4.4-1 7.4-1s5 .1 7.4 1M8.6 4.6c.9 2.4 1 4.4 1 7.4s-.1 5-1 7.4M15.4 4.6c-.9 2.4-1 4.4-1 7.4s.1 5 1 7.4" /></>),
+  history: (<><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5" /><path d="M3.5 4v4.5H8" /><path d="M12 7.5V12l3 2" /></>),
   offline: (<><path d="M3 3l18 18" /><path d="M8.5 16.5a5 5 0 0 1 7 0M5 12.6a10 10 0 0 1 4.2-2.4M19 12.6a10 10 0 0 0-3-2M2 9a15 15 0 0 1 4.3-2.7M22 9a15 15 0 0 0-10-3.9" /><circle cx="12" cy="20" r="0.6" /></>),
 };
 

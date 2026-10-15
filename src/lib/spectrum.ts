@@ -136,3 +136,53 @@ export function planckRelative(nm: number, T = 5772): number {
   const B = (x: number) => 1 / (x ** 5 * (Math.exp((h * c) / (x * k * T)) - 1));
   return B(l) / B(peak);
 }
+
+export interface BandData {
+  status: 'forecast' | 'estimated' | 'unavailable';
+  note: string;
+}
+
+/** What the available data can — and cannot — say about each band right now. */
+export const BAND_DATA: Record<SpectralBand['id'], BandData> = {
+  uvb: {
+    status: 'forecast',
+    note: 'The UV index is erythemally weighted, so it mostly tracks UV-B (plus the shortest UV-A). It is the closest forecast proxy for UV-B, not a UV-B measurement.',
+  },
+  uva: {
+    status: 'unavailable',
+    note: 'No provider forecasts UV-A separately. Ozone barely absorbs it, so it falls off more gently with Sun angle than UV-B — a low UV index in the morning or late afternoon still comes with appreciable UV-A.',
+  },
+  visible: {
+    status: 'estimated',
+    note: 'Rough range from the model’s total irradiance × the reference visible share. Illuminance at your eyes also depends on where you look and what surrounds you.',
+  },
+  ira: {
+    status: 'estimated',
+    note: 'Rough range from modelled total irradiance. Water vapour and cloud absorb near-IR in deep bands, so the true share varies more than the visible share.',
+  },
+  irb: { status: 'estimated', note: 'Rough range from modelled total irradiance; strongly shaped by atmospheric water vapour and CO₂.' },
+  irc: { status: 'estimated', note: 'A small tail of sunlight; outdoors, most long-wave infrared you feel is thermal emission from the ground, air and surroundings.' },
+};
+
+export interface UvShareSeries {
+  times: number[];
+  /** Erythemal UV (mW/m²) per kW/m² of modelled global irradiance. */
+  share: (number | null)[];
+}
+
+/**
+ * How the UV portion of sunlight changes through the day, from two model
+ * forecasts: erythemal UV (UV index × 25 mW/m²) divided by global horizontal
+ * irradiance. Shows proportions, not doses. Hours with GHI < 20 W/m² are left
+ * empty because the ratio becomes meaningless near the horizon.
+ */
+export function uvShareSeries(times: number[], uvIndex: (number | null)[], ghi: (number | null)[]): UvShareSeries {
+  const out: (number | null)[] = times.map((_, i) => {
+    // GHI is the mean of the preceding hour: pair it with the UV at the hour's midpoint.
+    const g = ghi[i];
+    const u0 = uvIndex[i - 1], u1 = uvIndex[i];
+    if (g == null || g < 20 || u0 == null || u1 == null) return null;
+    return (((u0 + u1) / 2) * 25) / (g / 1000);
+  });
+  return { times: times.map((t) => t - 30 * 60000), share: out };
+}

@@ -55,9 +55,34 @@ export interface OutdoorSession {
   sunscreen: Sunscreen | null;
   energy: number | null;
   alertness: number | null;
+  /** Subjective comfort during the session (1–5). */
+  comfort: number | null;
+  /** How the user felt afterwards compared with before (subjective). */
+  afterFeel: AfterFeel | null;
   notes: string;
   createdAt: number;
 }
+
+export type AfterFeel = 'better' | 'same' | 'worse';
+
+export type Pigmentation = 'very-fair' | 'fair' | 'medium' | 'olive' | 'brown' | 'dark';
+export type DayPart = 'morning' | 'midday' | 'afternoon' | 'evening';
+
+/**
+ * Optional personal context for "Solar History & Personal Observations".
+ * Stored for context only — the app never derives a UV tolerance or "safe"
+ * threshold from pigmentation or past exposure.
+ */
+export interface SolarProfile {
+  pigmentation: Pigmentation | null;
+  typicalOutdoorMin: number | null;
+  usualTimes: DayPart[];
+  habits: string;
+  notes: string;
+  updatedAt: number;
+}
+
+export const EMPTY_PROFILE: SolarProfile = { pigmentation: null, typicalOutdoorMin: null, usualTimes: [], habits: '', notes: '', updatedAt: 0 };
 
 export type OutcomeKey =
   | 'sleepDuration' | 'sleepQuality' | 'energy' | 'sleepiness' | 'sleepOnsetMin' | 'wakeMin';
@@ -87,9 +112,10 @@ export interface JournalData {
   sessions: OutdoorSession[];
   experiments: Experiment[];
   decisions: Decision[];
+  solarProfile: SolarProfile;
 }
 
-export const EMPTY_JOURNAL: JournalData = { entries: [], sessions: [], experiments: [], decisions: [] };
+export const EMPTY_JOURNAL: JournalData = { entries: [], sessions: [], experiments: [], decisions: [], solarProfile: EMPTY_PROFILE };
 
 const lvl = (v: unknown) => optNum(v, 1, 5);
 const mins = (v: unknown) => optNum(v, 0, 1440);
@@ -147,8 +173,23 @@ export function sanitizeSession(v: unknown): OutdoorSession | null {
     sunscreen: v.sunscreen == null ? null : oneOf(v.sunscreen, ['none', 'applied', 'reapplied', 'not-needed'] as const, 'none'),
     energy: lvl(v.energy),
     alertness: lvl(v.alertness),
+    comfort: lvl(v.comfort),
+    afterFeel: v.afterFeel == null ? null : oneOf(v.afterFeel, ['better', 'same', 'worse'] as const, 'same'),
     notes: str(v.notes),
     createdAt: numIn(v.createdAt, 0, 8.64e15, 0),
+  };
+}
+
+export function sanitizeProfile(v: unknown): SolarProfile {
+  if (!isObj(v)) return EMPTY_PROFILE;
+  const parts = ['morning', 'midday', 'afternoon', 'evening'] as const;
+  return {
+    pigmentation: v.pigmentation == null ? null : oneOf(v.pigmentation, ['very-fair', 'fair', 'medium', 'olive', 'brown', 'dark'] as const, 'medium'),
+    typicalOutdoorMin: optNum(v.typicalOutdoorMin, 0, 1440),
+    usualTimes: Array.isArray(v.usualTimes) ? [...new Set(v.usualTimes.filter((x): x is DayPart => typeof x === 'string' && (parts as readonly string[]).includes(x)))] : [],
+    habits: str(v.habits).slice(0, 2000),
+    notes: str(v.notes).slice(0, 2000),
+    updatedAt: numIn(v.updatedAt, 0, 8.64e15, 0),
   };
 }
 
@@ -191,6 +232,7 @@ export function sanitizeJournal(v: unknown): JournalData {
           }
         : null,
     ),
+    solarProfile: sanitizeProfile(v.solarProfile),
   };
 }
 
@@ -245,6 +287,10 @@ export function deleteExperiment(id: string) {
 
 export function recordDecision(d: Decision) {
   journalStore.set((j) => ({ ...j, decisions: [...j.decisions, d].slice(-200) }));
+}
+
+export function updateProfile(p: SolarProfile) {
+  journalStore.set((j) => ({ ...j, solarProfile: { ...p, updatedAt: Date.now() } }));
 }
 
 export function replaceJournal(data: JournalData) {

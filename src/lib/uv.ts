@@ -12,36 +12,37 @@ export interface UvBand {
   label: string;
   range: string;
   color: string;
+  /** Short, neutral description of the intensity (shown on cards). */
   protection: string;
+  /** WHO's own guidance for the category, attributed (shown in the protection panel). */
   detail: string;
 }
 
 export const UV_BANDS: UvBand[] = [
   {
     category: 'low', label: 'Low', range: '0–2', color: '#4f9d69',
-    protection: 'Minimal protection usually needed',
-    detail:
-      'WHO: protection generally not required for most people. Snow, water and sand reflect UV; very fair skin, photosensitising medication and long exposure can still lead to burning.',
+    protection: 'Low erythemal intensity',
+    detail: 'WHO: protection generally not required for most people. Snow, water and sand reflect UV; very sensitive skin and long exposure are exceptions.',
   },
   {
     category: 'moderate', label: 'Moderate', range: '3–5', color: '#d9b43a',
-    protection: 'Protection required',
-    detail: 'WHO: seek shade during midday hours; cover up with clothing, wear a hat and UV-protective sunglasses, and apply sunscreen to exposed skin.',
+    protection: 'Moderate intensity — duration starts to matter',
+    detail: 'WHO: seek shade around midday; cover up, wear a hat and sunglasses, and use sunscreen on exposed skin.',
   },
   {
     category: 'high', label: 'High', range: '6–7', color: '#e07b2e',
-    protection: 'Protection required',
-    detail: 'WHO: seek shade during midday hours; shirt, hat, sunglasses and sunscreen. Unprotected skin can burn quickly.',
+    protection: 'High intensity — exposure builds fairly quickly',
+    detail: 'WHO: as for moderate — shade around midday, covering clothing, hat, sunglasses and sunscreen.',
   },
   {
     category: 'very-high', label: 'Very high', range: '8–10', color: '#c8463a',
-    protection: 'Extra protection',
-    detail: 'WHO: avoid being outside during midday hours; make sure you seek shade. Shirt, sunscreen, hat and sunglasses are a must.',
+    protection: 'Very high intensity — exposure builds quickly',
+    detail: 'WHO: extra protection — avoid being outside during midday hours where possible; shade, shirt, hat, sunglasses and sunscreen.',
   },
   {
     category: 'extreme', label: 'Extreme', range: '11+', color: '#8a4fb0',
-    protection: 'Extra protection',
-    detail: 'WHO: avoid being outside during midday hours; seek shade; full protection is essential. Unprotected skin can burn in minutes.',
+    protection: 'Extreme intensity — the top of the scale',
+    detail: 'WHO: extra protection as for very high; unprotected skin can redden within minutes.',
   },
 ];
 

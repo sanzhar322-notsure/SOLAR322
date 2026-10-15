@@ -17,8 +17,9 @@ import {
 import { download, entriesCsv, makeBackup, parseBackup, sessionsCsv } from '../lib/exporters';
 import { navigate } from '../router';
 import type { OutdoorSession } from '../state/journal';
+import { SolarHistory } from '../components/SolarHistory';
 
-type Tab = 'log' | 'trends' | 'explore' | 'experiments' | 'export';
+type Tab = 'log' | 'history' | 'trends' | 'explore' | 'experiments' | 'export';
 
 export default function Journal({ params }: { params: URLSearchParams }) {
   const { solar } = useApp();
@@ -50,6 +51,7 @@ export default function Journal({ params }: { params: URLSearchParams }) {
         onChange={setTab}
         options={[
           { value: 'log', label: 'Entries' },
+          { value: 'history', label: 'Solar history' },
           { value: 'trends', label: 'Trends' },
           { value: 'explore', label: 'Relationships' },
           { value: 'experiments', label: 'Experiments' },
@@ -61,6 +63,7 @@ export default function Journal({ params }: { params: URLSearchParams }) {
       {tab === 'explore' && <Explore />}
       {tab === 'experiments' && <Experiments today={today} />}
       {tab === 'export' && <ExportPanel />}
+      {tab === 'history' && <SolarHistory />}
       <EntrySheet date={entryDate} onClose={() => setEntryDate(null)} />
     </div>
   );

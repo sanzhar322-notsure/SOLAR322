@@ -43,6 +43,11 @@ export interface RecommendContext {
   daylightIn30Min: number | null;
   /** Next lower-UV window label for missed-session suggestions. */
   nextWindowText: string | null;
+  /** Days in the last 14 with logged morning outdoor time (entries or sessions). */
+  morningDays14?: number;
+  /** Today's morning solar window, e.g. "06:05–08:40", if any. */
+  morningWindowText?: string | null;
+  priorities?: string[];
 }
 
 const fmtH = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, '0')} min`;
@@ -265,6 +270,23 @@ export function recommend(ctx: RecommendContext): Recommendation[] {
         priority: 7,
       });
     }
+  }
+
+  // 9b. Morning routine — only when the user said it matters to them.
+  const pr = ctx.priorities ?? [];
+  if ((pr.includes('morning') || pr.includes('circadian')) && ctx.morningDays14 != null && ctx.morningWindowText && two.nights >= 3 && ctx.morningDays14 < 5) {
+    out.push({
+      id: 'morning-routine',
+      kind: 'light',
+      title: 'Build the morning-light routine you asked for',
+      observed: `Morning outdoor time was logged on ${ctx.morningDays14} of the last 14 days. Today’s morning solar window: ${ctx.morningWindowText}.`,
+      suggestion: `Try a short, regular block outside soon after waking (${ctx.settings.targetWake}) on most days — even 10–15 minutes — and log it.`,
+      rationale: 'Morning daylight is a strong timing signal for the body clock; consistency is what your priorities emphasise. Whether it changes how you feel is something your own log can show.',
+      confidence: 'moderate',
+      confidenceWhy: 'Count from your own logs; the timing principle is well supported, individual benefit is not yet known.',
+      testNext: 'Two weeks, then compare morning outdoor minutes with alertness in Relationships or Solar history.',
+      priority: 5,
+    });
   }
 
   // 10. Missed planned session.

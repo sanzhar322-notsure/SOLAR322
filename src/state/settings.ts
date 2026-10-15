@@ -22,6 +22,21 @@ export interface PlaceLocation {
 }
 
 export type ThemeMode = 'sky' | 'dark' | 'light';
+
+/** What the user wants the app to emphasise. Used to organise information, never to hide safety-relevant context. */
+export type PriorityKey = 'circadian' | 'morning' | 'activity' | 'spectrum' | 'sleep' | 'heat' | 'uv' | 'extended';
+
+export const PRIORITIES: { key: PriorityKey; label: string; hint: string }[] = [
+  { key: 'circadian', label: 'Circadian consistency', hint: 'Light timing relative to your wake and sleep schedule' },
+  { key: 'morning', label: 'Morning daylight', hint: 'Sunrise, the morning window and a regular morning routine' },
+  { key: 'activity', label: 'Outdoor activity', hint: 'Comfortable blocks of time outside, weather and wind' },
+  { key: 'spectrum', label: 'Solar spectrum', hint: 'Air mass, band composition and what the data can show' },
+  { key: 'sleep', label: 'Sleep', hint: 'Evening light, wind-down and protecting sleep duration' },
+  { key: 'heat', label: 'Heat awareness', hint: 'Temperature and feels-like through each window' },
+  { key: 'uv', label: 'UV awareness', hint: 'UV detail even when levels are modest' },
+  { key: 'extended', label: 'Extended time outdoors', hint: 'Cumulative exposure over long sessions' },
+];
+const PRIORITY_KEYS = PRIORITIES.map((p) => p.key);
 export type MotionPref = 'system' | 'reduce' | 'full';
 
 export interface Settings {
@@ -48,6 +63,7 @@ export interface Settings {
     sendAltitudeToProvider: boolean;
   };
   horizonHeightM: number;
+  priorities: PriorityKey[];
   evidence: {
     showPeat: boolean;
     showKruse: boolean;
@@ -68,6 +84,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reminders: { inApp: true, windDown: true, morningLight: true },
   data: { autoRefreshMinutes: 15, sendAltitudeToProvider: false },
   horizonHeightM: 0,
+  priorities: ['circadian', 'morning', 'sleep', 'spectrum'],
   evidence: { showPeat: true, showKruse: true, minimumLevel: 'any' },
   onboarded: false,
 };
@@ -125,6 +142,9 @@ export function sanitizeSettings(v: unknown): Settings {
       sendAltitudeToProvider: bool(data.sendAltitudeToProvider, d.data.sendAltitudeToProvider),
     },
     horizonHeightM: numIn(v.horizonHeightM, 0, 3000, 0),
+    priorities: Array.isArray(v.priorities)
+      ? [...new Set(v.priorities.filter((p): p is PriorityKey => typeof p === 'string' && (PRIORITY_KEYS as string[]).includes(p)))]
+      : d.priorities,
     evidence: {
       showPeat: bool(ev.showPeat, true),
       showKruse: bool(ev.showKruse, true),

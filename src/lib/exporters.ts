@@ -38,13 +38,13 @@ export function sessionsCsv(sessions: OutdoorSession[]): string {
   const headers = [
     'status', 'start_utc', 'end_utc', 'duration_min', 'location', 'latitude', 'longitude', 'weather', 'cloud_cover_pct',
     'temperature_c', 'uv_peak_model', 'uv_mean_model', 'ambient_erythemal_sed_horizontal', 'uv_data_coverage',
-    'shade', 'clothing', 'sunscreen', 'energy_1_5', 'alertness_1_5', 'notes',
+    'shade', 'clothing', 'sunscreen', 'energy_1_5', 'alertness_1_5', 'comfort_1_5', 'felt_afterwards', 'notes',
   ];
   const rows = sessions.map((s) => [
     s.status, new Date(s.start).toISOString(), new Date(s.end).toISOString(), Math.round((s.end - s.start) / 60000),
     s.locationName, s.latitude, s.longitude, s.weather, s.cloudCover, s.temperature,
     s.uvPeak?.toFixed(1), s.uvMean?.toFixed(1), s.ambientSed?.toFixed(2), s.uvCoverage.toFixed(2),
-    s.shade, s.clothing, s.sunscreen, s.energy, s.alertness, s.notes,
+    s.shade, s.clothing, s.sunscreen, s.energy, s.alertness, s.comfort, s.afterFeel, s.notes,
   ]);
   return toCsv(headers, rows);
 }

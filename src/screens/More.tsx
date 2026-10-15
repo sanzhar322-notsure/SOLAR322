@@ -3,6 +3,7 @@ import { NAV, href } from '../router';
 
 const BLURB: Record<string, string> = {
   spectrum: 'UV, visible and infrared — and what can honestly be known.',
+  philosophy: 'Peat & Kruse, read critically against your own sky.',
   archive: 'Evidence cards: science, Ray Peat, Jack Kruse.',
   settings: 'Location, units, privacy, export & delete.',
 };
@@ -17,7 +18,7 @@ export default function More() {
         </div>
       </div>
       <div className="more-grid">
-        {NAV.filter((n) => ['spectrum', 'archive', 'settings'].includes(n.route)).map((n) => (
+        {NAV.filter((n) => ['philosophy', 'spectrum', 'archive', 'settings'].includes(n.route)).map((n) => (
           <a key={n.route} className="more-tile" href={href(n.route)}>
             <Icon name={n.icon} />
             <b>{n.label}</b>

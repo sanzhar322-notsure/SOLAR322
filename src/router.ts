@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { IconName } from './components/Icon';
 
 export type Route =
-  | 'command' | 'explorer' | 'planner' | 'circadian' | 'spectrum' | 'journal' | 'archive' | 'settings' | 'more';
+  | 'command' | 'explorer' | 'planner' | 'circadian' | 'spectrum' | 'philosophy' | 'journal' | 'archive' | 'settings' | 'more';
 
 export interface NavItem { route: Route; label: string; short: string; icon: IconName }
 
@@ -13,6 +13,7 @@ export const NAV: NavItem[] = [
   { route: 'circadian', label: 'Circadian Studio', short: 'Rhythm', icon: 'rhythm' },
   { route: 'journal', label: 'Solar Journal', short: 'Journal', icon: 'journal' },
   { route: 'spectrum', label: 'Spectrum Lab', short: 'Spectrum', icon: 'prism' },
+  { route: 'philosophy', label: 'Solar Philosophy', short: 'Philosophy', icon: 'shanyrak' },
   { route: 'archive', label: 'Knowledge Archive', short: 'Archive', icon: 'archive' },
   { route: 'settings', label: 'Settings', short: 'Settings', icon: 'settings' },
 ];

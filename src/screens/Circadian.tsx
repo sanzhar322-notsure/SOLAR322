@@ -9,8 +9,9 @@ import { Icon } from '../components/Icon';
 import { recommend, type Recommendation, type ScheduleAction } from '../lib/recommend';
 import { plannedOpportunity, summarize, toClock, parseClock } from '../lib/sleep';
 import { addDaysYMD, formatClock, formatDuration, formatMinutesOfDay, formatYMD, localMinutes } from '../lib/time/tz';
-import { WINDOW_LABEL, nextOpportunity, planWindows } from '../lib/planner';
+import { WINDOW_LABEL, currentOrNextWindow, planWindows } from '../lib/planner';
 import { buildIcs, download } from '../lib/exporters';
+import { buildRows } from '../lib/stats';
 import { href } from '../router';
 
 const CONF_LABEL = { low: 'Low confidence', moderate: 'Moderate confidence', higher: 'Higher confidence' } as const;
@@ -36,10 +37,10 @@ export default function Circadian() {
 
   const in30 = solar && loc ? solarDay(addDaysYMD(solar.todayYMD, 30), loc.latitude, loc.longitude, tz) : null;
   const windows = solar && loc ? planWindows(solar.today, snap?.hourly ?? null, loc.latitude, loc.longitude) : [];
-  const nextWin = nextOpportunity(windows, now);
+  const nextWin = currentOrNextWindow(windows, now);
   // Morning daylight after the target wake time.
   const wakeMin = parseClock(settings.sleep.targetWake) ?? 420;
-  const morningWin = solar ? windows.find((w) => localMinutes(w.end, tz) > wakeMin && localMinutes(w.start, tz) < 12 * 60) : null;
+  const morningWin = windows.find((w) => w.kind === 'morning') ?? null;
 
   const recs = recommend({
     entries: journal.entries,
@@ -53,6 +54,9 @@ export default function Circadian() {
     daylightTodayMin: solar ? solar.today.daylightMs / 60000 : null,
     daylightIn30Min: in30 ? in30.daylightMs / 60000 : null,
     nextWindowText: nextWin ? `${formatClock(nextWin.start, tz, h12)}–${formatClock(nextWin.end, tz, h12)} (${WINDOW_LABEL[nextWin.kind]})` : null,
+    morningWindowText: morningWin ? `${formatClock(morningWin.start, tz, h12)}–${formatClock(morningWin.end, tz, h12)}` : null,
+    morningDays14: buildRows(journal.entries, journal.sessions).filter((r) => r.date > formatYMD(addDaysYMD(solar?.todayYMD ?? { year: 2026, month: 1, day: 1 }, -14)) && (r.morningOutdoor ?? 0) >= 5).length,
+    priorities: settings.priorities,
   });
 
   const accept = (r: Recommendation) => {
@@ -163,7 +167,7 @@ export default function Circadian() {
               <dt>Sunrise today</dt><dd>{solar.today.sunrise ? formatClock(solar.today.sunrise, tz, h12) : '—'}</dd>
               <dt>Your target wake</dt><dd>{settings.sleep.targetWake}</dd>
               <dt>Morning window</dt><dd>{morningWin ? `${formatClock(morningWin.start, tz, h12)}–${formatClock(morningWin.end, tz, h12)}` : 'none today'}</dd>
-              <dt>Next opportunity</dt><dd>{nextWin ? `${formatClock(nextWin.start, tz, h12)} · ${WINDOW_LABEL[nextWin.kind]}` : '—'}</dd>
+              <dt>Current / next window</dt><dd>{nextWin ? `${formatClock(nextWin.start, tz, h12)} · ${WINDOW_LABEL[nextWin.kind]}` : '—'}</dd>
             </dl>
           ) : <p className="muted small">Set a location to see daylight timing.</p>}
           <p className="small muted" style={{ marginTop: 12 }}>

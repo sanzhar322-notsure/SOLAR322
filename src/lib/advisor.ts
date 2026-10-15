@@ -1,12 +1,14 @@
 /**
- * "What makes sense right now" — a single, conservative, explainable action
- * for the home screen, combining calculated Sun position, UV forecast,
- * modelled weather and the user's own sleep schedule.
+ * "Right now" — one contextual observation for the home screen, built from
+ * calculated Sun position, forecast UV, modelled weather and the user's own
+ * schedule and priorities. It explains what is happening and why it is shown;
+ * it does not issue blanket commands, and it never infers hormones,
+ * mitochondrial function or metabolism from weather data.
  */
 import type { SkyPhase, SolarDay } from './astro/solar';
 import { parseClock } from './sleep';
-import { uvBand } from './uv';
-import { heatNote } from './planner';
+import { heatSentence, uvSentence, windowThreshold } from './planner';
+import type { PriorityKey } from '../state/settings';
 
 export interface NowAction {
   id: string;
@@ -14,94 +16,137 @@ export interface NowAction {
   detail: string;
   why: string;
   tone: 'sleep' | 'light' | 'protect' | 'caution' | 'neutral';
+  /** Data points the message is built from, shown as chips. */
+  facts: string[];
 }
 
 export interface AdvisorInput {
+  now?: number;
   nowMin: number; // local minutes after midnight
   phase: SkyPhase;
   morning: boolean;
   elevation: number;
   uv: number | null;
+  uvPeak?: { uv: number; t: number } | null;
+  cloud?: number | null;
   apparentTemp: number | null;
   targetWake: string;
   targetBedtime: string;
   windDownMinutes: number;
   day: SolarDay;
+  priorities?: PriorityKey[];
+  formatTime?: (t: number) => string;
 }
 
 function inWindow(now: number, start: number, end: number): boolean {
-  // handles windows that wrap past midnight
   return start <= end ? now >= start && now < end : now >= start || now < end;
 }
 
+const hm = (m: number) => `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, '0')}:${String(Math.round((((m % 1440) + 1440) % 1440) % 60)).padStart(2, '0')}`;
+const dur = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, '0')} min` : `${Math.round(min)} min`);
+
 export function currentAction(a: AdvisorInput): NowAction {
+  const f = a.formatTime ?? ((t: number) => new Date(t).toISOString().slice(11, 16));
+  const pr = a.priorities ?? [];
   const wake = parseClock(a.targetWake) ?? 420;
   const bed = parseClock(a.targetBedtime) ?? 1380;
   const windStart = (bed - a.windDownMinutes + 1440) % 1440;
+  const d = a.day;
+  const facts: string[] = [];
+  if (d.sunrise) facts.push(`Sunrise ${f(d.sunrise)}`);
+  if (d.sunset) facts.push(`Sunset ${f(d.sunset)}`);
+  facts.push(`Sun ${a.elevation >= 0 ? '+' : ''}${a.elevation.toFixed(0)}°`);
+  if (a.cloud != null) facts.push(`Cloud ${Math.round(a.cloud)}%`);
+  if (a.uv != null) facts.push(`UV ${a.uv.toFixed(1)}`);
 
   if (inWindow(a.nowMin, bed, wake)) {
     return {
-      id: 'sleep',
-      tone: 'sleep',
-      title: 'Sleep window',
-      detail: 'Keep lights low and screens away. If you are awake, dim, warm light is kinder than bright overhead light.',
-      why: `Inside your planned sleep period (${a.targetBedtime}–${a.targetWake}). Bright light at night can shift the body clock and suppress melatonin.`,
+      id: 'sleep', tone: 'sleep', facts,
+      title: 'Night — your sleep window',
+      detail: 'If you’re awake, dim and warm light is gentler on the night than overhead lighting or a bright screen.',
+      why: `Inside your planned sleep period (${a.targetBedtime}–${a.targetWake}).`,
     };
   }
   if (inWindow(a.nowMin, windStart, bed)) {
     return {
-      id: 'wind-down',
-      tone: 'sleep',
-      title: 'Wind-down time',
-      detail: 'Dim room lights, lower screen brightness (Night Shift / Reduce White Point), and switch to calmer activities.',
-      why: `${a.windDownMinutes} min before your target bedtime ${a.targetBedtime}. Lower evening light supports earlier sleep onset; it is the brightness and timing that matter most, not only the colour.`,
+      id: 'wind-down', tone: 'sleep', facts,
+      title: 'Wind-down',
+      detail: `${d.sunset ? `The Sun set at ${f(d.sunset)}. ` : ''}Bedtime is ${a.targetBedtime}: a good stretch to lower brightness gradually — lamps instead of overheads, dimmer screens.`,
+      why: `Starts ${a.windDownMinutes} min before your target bedtime. Light intensity and timing in the evening affect circadian timing; the colour of light matters less than how bright it is.`,
     };
   }
-  const heat = heatNote(a.apparentTemp);
-  if (a.apparentTemp != null && a.apparentTemp >= 39) {
-    return { id: 'heat', tone: 'caution', title: 'Dangerous heat', detail: heat ?? '', why: 'Modelled feels-like temperature is in the danger range; heat illness can develop quickly.' };
+
+  const heat = heatSentence(a.apparentTemp, false);
+  if (heat && heat.weight === 'important') {
+    return { id: 'heat', tone: 'caution', facts, title: 'Strong heat', detail: heat.text, why: 'Modelled feels-like temperature for your location.' };
   }
-  if (a.phase === 'day' || a.phase === 'golden') {
-    if (a.uv != null) {
-      const band = uvBand(a.uv);
-      if (a.uv >= 7.5) {
-        return { id: 'uv-very-high', tone: 'protect', title: `UV ${band.label.toLowerCase()} — minimise midday sun`, detail: band.detail, why: `Forecast UV index ≈ ${a.uv.toFixed(1)}. ${band.protection}.` };
-      }
-      if (a.uv >= 2.5) {
-        return { id: 'uv-protect', tone: 'protect', title: `UV ${band.label.toLowerCase()} — protection needed outdoors`, detail: band.detail, why: `Forecast UV index ≈ ${a.uv.toFixed(1)}. Daylight is still useful for your rhythm; shade and cover let you have it without burning.` };
-      }
-      const morning = a.morning && a.nowMin >= wake - 30;
-      return {
-        id: morning ? 'morning-light' : 'daylight',
-        tone: 'light',
-        title: morning ? 'Good moment for morning daylight' : 'Lower-UV daylight',
-        detail: morning
-          ? 'A short time outdoors after waking gives your eyes bright natural light. No need to look at the Sun — never stare at it.'
-          : 'Outdoor daylight is far brighter than indoor light. Dress for the weather; lower UV is not zero UV.',
-        why: `Sun ${a.elevation.toFixed(0)}° above the horizon with a forecast UV index of ≈ ${a.uv.toFixed(1)} (low).${heat ? ' ' + heat : ''}`,
-      };
-    }
+
+  const up = a.phase === 'day' || a.phase === 'golden';
+  const threshold = windowThreshold(d.noonElevation);
+  const uvLine = a.uvPeak ? uvSentence(a.uvPeak.uv, f(a.uvPeak.t)) : null;
+
+  if (up && a.morning && a.elevation < threshold) {
+    const since = d.sunrise ? Math.round(((a.now ?? Date.now()) - d.sunrise) / 60000) : null;
+    const startDay = a.nowMin >= wake - 30
+      ? `You planned to begin your day at ${a.targetWake} — a natural point for time outside, building a consistent morning routine.`
+      : `Your planned wake time is ${a.targetWake}.`;
     return {
-      id: 'uv-unknown',
-      tone: 'caution',
-      title: 'Daylight — UV data unavailable',
-      detail: a.elevation > 45
-        ? 'The Sun is high (your shadow is shorter than you): assume UV may be high and use shade, a hat and sunscreen.'
-        : 'The Sun is fairly low; UV is usually lower, but use protection for longer exposure.',
-      why: `Sun elevation ${a.elevation.toFixed(0)}° (calculated). Without a UV forecast the app will not guess a number.`,
+      id: 'morning-window', tone: 'light', facts,
+      title: 'Morning solar window',
+      detail: `${d.sunrise ? `Sunrise was at ${f(d.sunrise)}; ` : ''}the Sun is ${a.elevation.toFixed(0)}° up and climbing. ${startDay}${a.cloud != null ? ` Cloud cover ${Math.round(a.cloud)}%.` : ''}`,
+      why: `Sun below ${Math.round(threshold)}° and rising (calculated)${since != null && since > 0 && since < 600 ? `, ${dur(since)} after sunrise` : ''}. Daylight reaching the eyes early in the day is one of the strongest timing signals for the body clock.`,
+    };
+  }
+  if (up && a.elevation >= threshold) {
+    const nearPeak = d.noonElevation != null && a.elevation >= d.noonElevation - 5;
+    const parts: string[] = [];
+    parts.push(nearPeak
+      ? `Solar elevation ${a.elevation.toFixed(0)}° — near its daily maximum of ${d.noonElevation!.toFixed(0)}°${d.solarNoon ? ` at ${f(d.solarNoon)}` : ''}.`
+      : `Sun ${a.elevation.toFixed(0)}° and ${a.morning ? 'rising' : 'descending'}; maximum ${d.noonElevation?.toFixed(0) ?? '—'}°${d.solarNoon ? ` at ${f(d.solarNoon)}` : ''}.`);
+    if (uvLine) parts.push(uvLine.text);
+    else if (a.uv == null) parts.push(a.elevation > 50 ? 'No UV forecast right now; with the Sun this high, UV is usually substantial under clear skies.' : 'No UV forecast right now.');
+    if (pr.includes('activity') && a.apparentTemp != null && a.apparentTemp > 8 && a.apparentTemp < 28) parts.push(`Comfortable for activity: feels like ${Math.round(a.apparentTemp)} °C.`);
+    if (heat) parts.push(heat.text);
+    const tone = uvLine?.weight === 'important' ? 'protect' : 'light';
+    return {
+      id: nearPeak ? 'midday' : 'daytime', tone, facts,
+      title: nearPeak ? 'Sun near its daily high' : 'Daytime solar window',
+      detail: parts.join(' '),
+      why: `Sun above ${Math.round(threshold)}° (calculated); UV values are model forecasts. How long you stay out matters as much as when.`,
+    };
+  }
+  if (up && !a.morning) {
+    const toSet = d.sunset ? Math.max(0, Math.round((d.sunset - (a.now ?? Date.now())) / 60000)) : null;
+    return {
+      id: 'evening-window', tone: 'light', facts,
+      title: 'Afternoon & evening window',
+      detail: `Daylight is declining${toSet != null ? ` — sunset at ${f(d.sunset!)}, ${dur(toSet)} away` : ''}. Your target bedtime is ${a.targetBedtime}; this is a natural time to complete outdoor activities and let the evening transition toward dimmer light.`,
+      why: `Sun below ${Math.round(threshold)}° and descending (calculated).`,
     };
   }
   if (a.phase === 'civil' && a.morning) {
-    return { id: 'dawn', tone: 'light', title: 'Civil dawn', detail: 'The sky is brightening before sunrise. Morning light outdoors is available even before the Sun clears the horizon.', why: 'Sun between −6° and the horizon (calculated).' };
+    return {
+      id: 'dawn', tone: 'light', facts,
+      title: 'Civil dawn',
+      detail: `The sky is brightening${d.sunrise ? `; sunrise at ${f(d.sunrise)}` : ''}. Outdoor light is already far brighter than most rooms.`,
+      why: 'Sun between −6° and the horizon (calculated).',
+    };
   }
-  if (a.phase === 'civil' && !a.morning) {
-    return { id: 'dusk', tone: 'neutral', title: 'Dusk', detail: 'Natural light is fading. A good cue to start lowering indoor brightness as the evening goes on.', why: 'Sun just below the horizon (calculated).' };
+  if (a.phase === 'civil') {
+    return { id: 'dusk', tone: 'neutral', facts, title: 'Dusk', detail: `Natural light is fading. Wind-down begins at ${hm(windStart)}.`, why: 'Sun just below the horizon (calculated).' };
+  }
+  if (a.morning) {
+    return {
+      id: 'pre-dawn', tone: 'neutral', facts,
+      title: 'Before dawn',
+      detail: `It’s still dark${d.civilDawn ? `; civil dawn at ${f(d.civilDawn)}${d.sunrise ? `, sunrise ${f(d.sunrise)}` : ''}` : ''}. If you’re up, bright indoor light helps you wake until there’s daylight outside.`,
+      why: 'Sun well below the horizon (calculated).',
+    };
   }
   return {
-    id: 'night',
-    tone: 'neutral',
-    title: a.morning ? 'Before dawn' : 'Evening',
-    detail: a.morning ? 'It is still dark outside. If you are up, use bright indoor light to wake and save outdoor light for after dawn.' : 'Keep evening lighting moderate; brighter is not better at this hour.',
+    id: 'evening', tone: 'neutral', facts,
+    title: 'Evening',
+    detail: `Wind-down begins at ${hm(windStart)}. Moderate lighting now makes the later transition to dim light easier.`,
     why: 'Sun well below the horizon (calculated).',
   };
 }
@@ -124,13 +169,12 @@ export function upcomingReminder(r: ReminderInput): { id: string; text: string }
   if (r.windDownOn) {
     const until = (windStart - r.nowMin + 1440) % 1440;
     if (until > 0 && until <= 30) {
-      const hh = String(Math.floor(windStart / 60)).padStart(2, '0'), mm = String(windStart % 60).padStart(2, '0');
-      return { id: 'wind-down-soon', text: `Wind-down begins at ${hh}:${mm} (in ${Math.round(until)} min). Start dimming lights and screens.` };
+      return { id: 'wind-down-soon', text: `Wind-down begins at ${hm(windStart)} (in ${Math.round(until)} min).` };
     }
   }
   if (r.morningOn && r.sunUp) {
     const since = (r.nowMin - wake + 1440) % 1440;
-    if (since <= 120) return { id: 'morning-light', text: 'Morning daylight reminder: a few minutes outdoors gives your eyes bright natural light. Check the UV card before longer exposure.' };
+    if (since <= 120) return { id: 'morning-light', text: 'Morning daylight: the Sun is up — a few minutes outside fits your morning routine.' };
   }
   return null;
 }

@@ -25,7 +25,7 @@ async function noHorizontalOverflow(page: Page) {
   expect(sw, 'page must not scroll horizontally').toBeLessThanOrEqual(iw + 1);
 }
 
-const ROUTES = ['', 'explorer', 'planner', 'circadian', 'journal', 'spectrum', 'archive', 'settings', 'more'];
+const ROUTES = ['', 'explorer', 'planner', 'circadian', 'journal', 'spectrum', 'philosophy', 'archive', 'settings', 'more'];
 
 test('every screen renders without horizontal overflow, with adaptive navigation', async ({ page }, info) => {
   await setup(page);
@@ -48,7 +48,9 @@ test('command center shows calculated sun data and labelled model data', async (
   await setup(page);
   await page.goto('/');
   await expect(page.locator('.hero .clock')).toHaveText('09:30');
-  await expect(page.getByText('Recommended now')).toBeVisible();
+  await expect(page.getByText('Right now', { exact: true })).toBeVisible();
+  await expect(page.getByText('Daytime solar window').first()).toBeVisible();
+  await expect(page.getByText('Through Peat & Kruse, right now')).toBeVisible();
   await expect(page.getByText(/of daylight/)).toBeVisible();
   await expect(page.locator('.badge.modeled').first()).toBeVisible();
   await expect(page.locator('.badge.calculated').first()).toBeVisible();
@@ -103,4 +105,48 @@ test('solar clock can be scrubbed with the keyboard', async ({ page }) => {
   await page.keyboard.press('PageUp');
   const after = await handle.getAttribute('aria-valuenow');
   expect(Number(after)).toBe((Number(before) + 60) % 1440);
+});
+
+test('planner shows context-aware solar windows and the lens persists', async ({ page }) => {
+  await setup(page);
+  await page.goto('/#/planner');
+  for (const w of ['Morning solar window', 'Daytime solar window', 'Afternoon & evening window']) {
+    await expect(page.getByText(w, { exact: true }).first()).toBeVisible();
+  }
+  await expect(page.getByText(/Seek shade around midday/)).toHaveCount(0);
+  await expect(page.getByText(/Lower UV is not zero UV/)).toHaveCount(0);
+  const heat = page.getByRole('group', { name: 'Priorities' }).getByRole('button', { name: /Heat awareness/ });
+  await heat.click();
+  await expect(heat).toHaveAttribute('aria-pressed', 'true');
+  await page.reload();
+  await expect(page.getByRole('group', { name: 'Priorities' }).getByRole('button', { name: /Heat awareness/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Protection, in context')).toBeVisible();
+  await page.getByRole('button', { name: '4h' }).click();
+  await expect(page.getByText(/Ambient UV over this session ≈/)).toBeVisible();
+});
+
+test('solar philosophy presents three layers and live sky lines', async ({ page }) => {
+  await setup(page);
+  await page.goto('/#/philosophy');
+  await expect(page.getByRole('heading', { name: 'Light as a metabolic signal' })).toBeVisible();
+  await expect(page.getByText('The original idea').first()).toBeVisible();
+  await expect(page.getByText('The scientific evidence').first()).toBeVisible();
+  await expect(page.getByText('Practical reading').first()).toBeVisible();
+  await expect(page.getByText(/Sunlight reaching the ground ≈ \d+ W\/m²/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Jack Kruse' }).click();
+  await expect(page.getByRole('heading', { name: 'Light as a metabolic signal' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Sunrise as the master timing signal' })).toBeVisible();
+});
+
+test('solar history profile saves without deriving any tolerance', async ({ page }) => {
+  await setup(page);
+  await page.goto('/#/journal');
+  await page.getByRole('button', { name: 'Solar history' }).click();
+  await page.getByLabel('General skin pigmentation (optional)').selectOption('olive');
+  await page.getByLabel('Typical time outside on an ordinary day (minutes)').fill('45');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.reload();
+  await page.getByRole('button', { name: 'Solar history' }).click();
+  await expect(page.getByText('How your outdoor time compares')).toBeVisible();
+  await expect(page.getByText(/safe (minutes|threshold|dose)/i)).toHaveCount(0);
 });

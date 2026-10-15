@@ -99,7 +99,7 @@ export default function Archive({ params }: { params: URLSearchParams }) {
         </div>
       </div>
       <Notice tone="info">
-        Educational content, not medical advice. Ideas from Ray Peat and Jack Kruse are presented as <b>their positions</b>, paraphrased with links to their own writing, and assessed against independent evidence. Following either is not necessary for health.
+        Ideas from Ray Peat and Jack Kruse are presented as <b>their positions</b>, paraphrased with links to their own writing, and assessed against independent evidence. For each idea read in three layers and tied to your sky, see <a href="#/philosophy">Solar Philosophy</a>. Educational, not medical advice.
       </Notice>
       <Segmented<View> label="Archive view" value={view} onChange={setView} options={[{ value: 'cards', label: 'Cards' }, { value: 'compare', label: 'Compare' }, { value: 'sources', label: 'Sources' }, { value: 'method', label: 'Method' }]} />
 

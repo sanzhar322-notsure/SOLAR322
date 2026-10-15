@@ -11,6 +11,7 @@ const Explorer = lazy(() => import('./screens/Explorer'));
 const Planner = lazy(() => import('./screens/Planner'));
 const Circadian = lazy(() => import('./screens/Circadian'));
 const Spectrum = lazy(() => import('./screens/Spectrum'));
+const Philosophy = lazy(() => import('./screens/Philosophy'));
 const Journal = lazy(() => import('./screens/Journal'));
 const Archive = lazy(() => import('./screens/Archive'));
 const SettingsScreen = lazy(() => import('./screens/Settings'));
@@ -22,6 +23,7 @@ function Screen({ route, params }: { route: Route; params: URLSearchParams }) {
     case 'planner': return <Planner />;
     case 'circadian': return <Circadian />;
     case 'spectrum': return <Spectrum />;
+    case 'philosophy': return <Philosophy params={params} />;
     case 'journal': return <Journal params={params} />;
     case 'archive': return <Archive params={params} />;
     case 'settings': return <SettingsScreen />;
@@ -33,7 +35,7 @@ function Screen({ route, params }: { route: Route; params: URLSearchParams }) {
 function Shell() {
   const { route, params } = useRoute();
   const { loc } = useApp();
-  const active = (r: Route) => (r === route || (r === 'more' && ['spectrum', 'archive', 'settings', 'more'].includes(route)) ? 'page' : undefined);
+  const active = (r: Route) => (r === route || (r === 'more' && ['spectrum', 'philosophy', 'archive', 'settings', 'more'].includes(route)) ? 'page' : undefined);
   return (
     <div className="shell">
       <a className="skip-link" href="#main">Skip to content</a>

@@ -669,3 +669,20 @@ table.data td.n { text-align: right; font-variant-numeric: tabular-nums; }
 .more-tile b { font-family: var(--font-display); font-size: 1.25rem; }
 
 .print-hide { }
+
+/* ---------- Solar Philosophy ---------- */
+.phil-layer { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; border-top: 1px solid var(--border); padding-top: 10px; }
+.phil-step {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 12px/1 var(--font-sans); color: var(--accent-ink); background: var(--accent);
+}
+.phil-sky { border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--border); padding: 10px 12px; }
+.context-lines { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.context-lines li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: var(--fs-sm); color: var(--text-2); }
+.context-lines li svg { width: 16px; height: 16px; margin-top: 2px; color: var(--text-3); }
+.context-lines li.relevant { color: var(--text); }
+.context-lines li.relevant svg { color: var(--c-model); }
+.context-lines li.important { color: var(--text); font-weight: 500; }
+.context-lines li.important svg { color: var(--c-stale); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); font-variant-numeric: tabular-nums; }

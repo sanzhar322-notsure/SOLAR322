@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
+import { TimeChart } from '../components/charts';
+import { formatClock } from '../lib/time/tz';
+import { href } from '../router';
 import { useApp } from '../state/app';
 import { useWidth } from '../components/charts';
 import { Badge, Card, Disclosure, Notice, Stat } from '../components/ui';
 import {
-  AM0, AM15G, BANDS, SPECTRUM_START_NM, SPECTRUM_STEP_NM, estimateBands, wavelengthAt, wavelengthColor, type SpectralBand,
+  AM0, AM15G, BAND_DATA, BANDS, SPECTRUM_START_NM, SPECTRUM_STEP_NM, estimateBands, uvShareSeries, wavelengthAt, wavelengthColor, type SpectralBand,
 } from '../lib/spectrum';
 import { airMass, extraterrestrialHorizontal } from '../lib/astro/solar';
 import { interpolate, HOURLY_MEAN_SHIFT } from '../lib/data/series';
@@ -77,7 +80,7 @@ function SpectrumChart({ selected, onSelect }: { selected: SpectralBand['id']; o
 }
 
 export default function Spectrum() {
-  const { loc, snap, now, solar, fresh } = useApp();
+  const { loc, snap, now, solar, fresh, settings } = useApp();
   const [band, setBand] = useState<SpectralBand['id']>('visible');
   const b = BANDS.find((x) => x.id === band)!;
   const h = snap?.hourly ?? null;
@@ -91,6 +94,7 @@ export default function Spectrum() {
   const toa = pos ? extraterrestrialHorizontal(pos.elevation, pos.distanceAU) : null;
   const uv = uvNow(snap, now);
   const stale = fresh?.state === 'stale';
+  const share = h ? uvShareSeries(h.time, h.uvIndex, h.shortwave) : null;
 
   return (
     <div className="page">
@@ -98,7 +102,7 @@ export default function Spectrum() {
         <div>
           <span className="eyebrow">Spectrum Lab</span>
           <h1>The light of the Sun, band by band</h1>
-          <p className="lede">What sunlight is made of, what reaches the ground, and — honestly — what can and cannot be known about your sky right now.</p>
+          <p className="lede">The Sun is more than a UV number. What sunlight is made of, how its mix shifts through the day, and — honestly — what can and cannot be known about your sky right now. <a href={href('philosophy', { c: 'spectrum-package' })}>Kruse’s “spectrum package” idea →</a></p>
         </div>
       </div>
 
@@ -153,6 +157,54 @@ export default function Spectrum() {
           )}
         </Card>
       </div>
+
+      <Card eyebrow="Right now" title="Band by band: what the data can say">
+        <div className="table-scroll">
+          <table className="data">
+            <thead><tr><th>Band</th><th>Range</th><th>Now</th><th>What the data can say</th></tr></thead>
+            <tbody>
+              {BANDS.map((x) => {
+                const d = BAND_DATA[x.id];
+                const e = est.find((v) => v.band.id === x.id)!;
+                const value = x.id === 'uvb'
+                  ? (uv.value != null ? `UV index ${uv.value.toFixed(1)}` : '—')
+                  : d.status === 'unavailable' ? '—'
+                  : e.low != null && e.high != null ? `${e.low < 10 ? e.low.toFixed(1) : Math.round(e.low)}–${e.high < 10 ? e.high.toFixed(1) : Math.round(e.high)} W/m²` : '—';
+                const kind = x.id === 'uvb' ? (uv.value != null ? 'forecast' : 'unavailable') : d.status === 'unavailable' ? 'unavailable' : 'estimated';
+                return (
+                  <tr key={x.id}>
+                    <td><i style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 5, background: x.color, marginRight: 6 }} />{x.name}</td>
+                    <td className="faint tnum">{x.nm[0]}–{x.nm[1]} nm</td>
+                    <td className="tnum" style={{ whiteSpace: 'nowrap' }}>{value}<div><Badge kind={kind as 'forecast' | 'unavailable' | 'estimated'} /></div></td>
+                    <td className="xs muted">{d.note}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="xs faint" style={{ marginBottom: 0 }}>Measured spectral irradiance for your location: unavailable. Low UV does not imply high near-infrared — early and late in the day both are lower in absolute terms; only the proportions shift.</p>
+      </Card>
+
+      <Card eyebrow="Model-derived ratio" title="How the UV share of sunlight changes through the day" actions={<Badge kind="modeled" />}>
+        {h ? (
+          <>
+            <TimeChart
+              ariaLabel="Erythemal UV per kilowatt of modelled sunlight through the day"
+              series={[{ id: 'share', label: 'UV share', color: '#9b7bff', times: share!.times, values: share!.share, format: (v) => `${Math.round(v)} mW/m² per kW/m²` }]}
+              start={solar?.today.dayStart ?? h.time[0]}
+              end={solar?.today.dayEnd ?? h.time[h.time.length - 1]}
+              yMin={0}
+              yMax={Math.max(50, Math.ceil(Math.max(0, ...share!.share.filter((x): x is number => x != null)) / 50) * 50)}
+              now={now}
+              formatX={(t) => (solar ? formatClock(t, solar.tz, settings.hour12) : '')}
+              height={170}
+              emptyText="Not enough modelled data for a ratio"
+            />
+            <p className="small muted" style={{ marginTop: 8, marginBottom: 0 }}>Sunburn-weighted UV (from the UV index) divided by total modelled sunlight. It rises toward solar noon because the shorter path through the atmosphere lets proportionally more UV-B through, and falls as the Sun gets lower — reduced, not absent. This is a ratio of two forecasts, not a spectral measurement.</p>
+          </>
+        ) : <p className="muted">Needs the hourly UV and irradiance forecast.</p>}
+      </Card>
 
       <Card eyebrow="Estimate · wide uncertainty" title="Rough split of the modelled sunlight" actions={<Badge kind="estimated" />}>
         {ghi == null ? (

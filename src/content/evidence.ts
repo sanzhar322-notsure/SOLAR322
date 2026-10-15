@@ -109,7 +109,7 @@ export const CARDS: EvidenceCard[] = [
     primarySources: ['wright-2013', 'stothard-2017'],
     independentSources: ['brown-2022'],
     practical: 'More daylight and less evening light can help a late body clock move earlier — no camping required.',
-    safety: 'Dress for the weather; protect skin when UV is 3 or higher.',
+    safety: 'Dress for the weather; for long stays in higher UV, protection becomes more relevant.',
   },
   {
     id: 'screens',
@@ -209,8 +209,8 @@ export const CARDS: EvidenceCard[] = [
     conflicting: [],
     primarySources: ['iarc-100d'],
     independentSources: ['who-uvi-2002', 'green-2011'],
-    practical: 'Use the UV index, not warmth or brightness, to decide on protection.',
-    safety: 'Avoid sunburn and deliberate tanning; protect children especially.',
+    practical: 'Use the UV index and how long you’ll be out — not warmth or brightness — to judge when protection is worth it.',
+    safety: 'Sunburn is the clearest sign of excess UV; children’s skin is more sensitive.',
   },
   {
     id: 'vitamin-d',
@@ -397,7 +397,7 @@ export const CARDS: EvidenceCard[] = [
     primarySources: ['kruse-tensegrity2', 'kruse-time11'],
     independentSources: ['brown-2022', 'negelspach-2018', 'wright-2013'],
     practical: 'Get outdoor light after waking when practical. You do not need to be awake at sunrise.',
-    safety: 'Never look at the Sun. When UV is 3 or more, use protection.',
+    safety: 'Don’t look directly at the Sun. For longer stays in higher UV, duration matters more than the time of day.',
   },
   {
     id: 'kruse-evening-blue',
@@ -474,11 +474,10 @@ export const CARDS: EvidenceCard[] = [
     rationale: 'A 2022 review of 104 studies found some physiological effects (e.g. on adipose tissue and insulin sensitivity) but mostly small, heterogeneous studies; benefits remain debated.',
     supporting: ['Espeland 2022 review reports possible modest benefits.'],
     conflicting: ['Same review: small samples, unclear whether winter swimmers were healthier to begin with.'],
-    primarySources: ['kruse-home'],
+    primarySources: ['kruse-ctprotocol', 'kruse-ct6'],
     independentSources: ['espeland-2022'],
     practical: 'Not tracked by this app. If you try cold exposure, start mild and never alone.',
     safety: 'Cold-water immersion carries risks of cold shock, drowning, arrhythmia and hypothermia — avoid with heart disease and seek medical advice.',
-    researchNote: 'A specific primary post for the cold-thermogenesis protocol was not verified in this build; link points to his site.',
   },
   {
     id: 'kruse-biophotons',

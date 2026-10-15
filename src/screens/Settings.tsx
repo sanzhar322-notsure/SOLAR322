@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../state/app';
-import { DEFAULT_SETTINGS, settingsStore, updateSettings } from '../state/settings';
+import { DEFAULT_SETTINGS, PRIORITIES, settingsStore, updateSettings } from '../state/settings';
 import { EMPTY_JOURNAL, replaceJournal, useJournal } from '../state/journal';
 import { clearEnvironmentCache, currentProvider } from '../state/environment';
 import { LocationPicker } from '../components/LocationPicker';
@@ -118,6 +118,14 @@ export default function Settings() {
           </div>
           <Switch label="Send my altitude to the provider" hint="Improves temperature downscaling for mountain sites; otherwise the provider uses its own terrain model" checked={settings.data.sendAltitudeToProvider} onChange={(v) => updateSettings((s) => ({ ...s, data: { ...s.data, sendAltitudeToProvider: v } }))} />
           {snap?.missing.length ? <Disclosure summary="Missing fields">{snap.missing.join(', ')}</Disclosure> : null}
+        </Card>
+
+        <Card eyebrow="Your lens" title="Priorities">
+          <p className="small muted">Shape which details the planner and home screen bring forward. Strong UV or heat is always mentioned when it occurs.</p>
+          {PRIORITIES.map((p) => (
+            <Switch key={p.key} label={p.label} hint={p.hint} checked={settings.priorities.includes(p.key)}
+              onChange={(v) => updateSettings((s) => ({ ...s, priorities: v ? [...new Set([...s.priorities, p.key])] : s.priorities.filter((x) => x !== p.key) }))} />
+          ))}
         </Card>
 
         <Card eyebrow="Library" title="Evidence preferences">

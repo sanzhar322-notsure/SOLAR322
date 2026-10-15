@@ -2,13 +2,22 @@
 
 A personal solar, circadian-rhythm and environmental-intelligence app for iPhone and iPad, inspired by Tengri, the Eternal Blue Sky of the Kazakh steppe.
 
-It's a Progressive Web App (React + TypeScript + Vite). It runs in Safari and can be added to the Home Screen. It does five things:
+It's a Progressive Web App (React + TypeScript + Vite). It runs in Safari and can be added to the Home Screen. It does six things:
 
 - calculates the Sun's position, sunrise, sunset and all three twilights on your device
 - fetches real weather, UV and solar-irradiance forecasts from Open-Meteo
-- plans outdoor time conservatively around UV and heat
-- keeps a private sleep and outdoor-light journal with trends and personal experiments
-- explains the science, including Ray Peat's and Jack Kruse's ideas, with each claim labelled by strength of evidence
+- organises each day into morning, daytime and evening solar windows, with UV, heat, cloud and spectrum in context
+- reads the solar environment through Ray Peat's and Jack Kruse's ideas, each set against independent evidence
+- keeps a private sleep, outdoor-light and solar-history journal with trends and personal experiments
+- shows what can and can't be known about the spectrum overhead, band by band
+
+## Philosophy
+
+Sunlight is treated as an environmental signal, not just a UV hazard. Timing, duration, spectral composition, temperature, season, sleep and your own observations are considered together. The UV index is one variable among several.
+
+- **Context, not commands.** Protection is discussed in proportion to UV intensity × duration, reflection, heat and individual susceptibility. Detailed guidance lives in one "Protection, in context" panel instead of being repeated on every card. Intense UV and strong heat are always mentioned when they occur.
+- **Peat and Kruse, read critically.** Their ideas are paraphrased (never quoted) with links to their own writing. Each one is read in three layers: the original idea, the independent evidence (supports / contradicts / not adequately tested), and a practical reading. Each is also tied to your live sky.
+- **No biological inference from weather.** The app never claims to measure mitochondria, hormones or metabolic rate. It never fabricates infrared measurements, and it never derives a personal UV tolerance from skin colour or past exposure.
 
 > Educational tool, not medical advice. It doesn't diagnose anything, and it doesn't claim to measure your biology.
 
@@ -18,14 +27,15 @@ It's a Progressive Web App (React + TypeScript + Vite). It runs in Safari and ca
 
 | Screen | What it does |
 |---|---|
-| **Solar Command Center** (Today) | Shows a live sky with the Sun at its calculated position. Also shows local time, location and altitude, Sun elevation and azimuth, a countdown to the next solar event, current UV and its category, modelled weather, a "recommended now" action with its reasoning, the next outdoor window and your sleep target. In-app reminders appear here. |
+| **Solar Command Center** (Today) | Shows a live sky with the Sun at its calculated position, plus local time, location and altitude, Sun elevation and azimuth and a countdown to the next solar event. A **Right now** card is built from real values (sunrise, wake time, cloud, UV peak, bedtime), shows the data it used and why it appears, and can be dismissed for the day. Also shows the current or next solar window, UV, modelled weather, the solar day, a **Peat & Kruse lens** tied to the current sky, and a band-by-band **Spectrum now** card. |
 | **Solar Explorer** (Sky) | A 24-hour solar clock you can drag (or step with arrow keys) to inspect any moment. Includes a date picker with equinox and solstice presets, elevation curves compared with the solstices, a full event table, how far your clock is ahead of or behind the Sun, and charts of daylight, sunrise and sunset across the year. |
-| **Exposure Planner** (Plan) | Shows the UV forecast against clear-sky UV, the daily maximum and peak time, and outdoor windows sorted by UV and heat. You can plan a session or log what you actually did. Logged sessions are stored with the model's UV, cloud and temperature, plus the *ambient* UV dose. |
+| **Exposure Planner** (Plan) | Splits daylight into **morning, daytime and afternoon/evening solar windows**. The split is where the calculated Sun crosses min(30°, 60% of the noon elevation), so it adapts to the season. Each window shows its elevation range, UV peak, cloud and feels-like temperature, plus concise context lines shaped by **your lens** (circadian, morning daylight, activity, spectrum, sleep, heat, UV, extended time). A **Plan check** estimates cumulative ambient UV for a chosen start and duration. Also includes the UV chart, logged sessions, a **Protection, in context** reference panel and links into Solar Philosophy. |
 | **Circadian Studio** (Rhythm) | Lets you edit your schedule and compares your plan with what you logged night by night. Shows consistency statistics and rule-based suggestions with an **Accept / Modify / Dismiss** choice. Also has a daylight plan, reminders exported as a calendar file (.ics), an evening-light guide and an iOS settings guide. |
-| **Solar Journal** | A quick morning log where every field except the date is optional, plus a history list. Includes 7/30/90-day trends, a two-variable relationship explorer (same day or next day, Pearson r and Spearman ρ, with a caveat), personal experiments (baseline vs. change) and CSV/JSON export and import. |
-| **Spectrum Lab** | An interactive solar spectrum from the ASTM G173-03 reference, with the share of energy in each band. For your sky right now it separates what is calculated, modelled, estimated (wide ranges) and unavailable. |
-| **Knowledge Archive** | 27 evidence cards in three categories: established science, Ray Peat and Jack Kruse. Includes search, filters, a side-by-side comparison, a 51-entry source registry and the rating method. |
-| **Settings** | Location and altitude, saved places, units, 12/24-hour clock, theme (which can follow the Sun), reduced motion, horizon dip, sleep schedule, reminders, data-provider settings, evidence preferences, install guide, a privacy statement, export, and "delete everything". |
+| **Solar Journal** | A quick morning log where every field except the date is optional, plus a history list. **Solar History & Personal Observations** holds an optional background (pigmentation, habits, typical time outside, used as context only). It summarises sessions by solar window, keeping subjective ratings (energy, alertness, comfort, "felt better") separate from environmental values (UV peak, ambient dose), and charts weekly outdoor minutes. Also includes 7/30/90-day trends, a relationship explorer, personal experiments and CSV/JSON export and import. |
+| **Spectrum Lab** | An interactive solar spectrum from the ASTM G173-03 reference, with each band's share of energy. A **band-by-band table** gives UV-B (UV index as a proxy), UV-A (not forecast, so marked unavailable), visible and infrared (wide-range estimates), with what the data can and can't say. A **UV-share chart** plots erythemal UV per kW/m² of modelled sunlight through the day: it shows how the mix changes with Sun angle, and that low UV doesn't mean high infrared. |
+| **Solar Philosophy** | Ten concepts from Peat and Kruse, including light as a metabolic signal, darkness, warmth and thyroid, food and stress, sunrise as a signal, the spectrum package, infrared and mitochondria, light and water, cold and seasons, and the artificial environment. Each is read in three layers with sources and an evidence rating, and connected to your sky now through labelled lines (calculated, model, estimate, unavailable). |
+| **Knowledge Archive** | 27 evidence cards in three categories: established science, Ray Peat and Jack Kruse. Includes search, filters, a side-by-side comparison, a 61-entry source registry and the rating method. |
+| **Settings** | Priorities (your lens), location and altitude, saved places, units, 12/24-hour clock, theme (which can follow the Sun), reduced motion, horizon dip, sleep schedule, reminders, data-provider settings, evidence preferences, install guide, a privacy statement, export, and "delete everything". |
 
 On iPhone there's a bottom tab bar (Today, Sky, Plan, Rhythm, Journal, More). On iPad there's a side rail: icons only in portrait, labelled in landscape. Wider screens use multi-column dashboards.
 
@@ -204,31 +214,37 @@ The existing tests carry over unchanged.
 These checks were run in the build sandbox:
 
 - **TypeScript:** `tsc -b` passes in strict mode.
-- **Unit and integration tests:** 95 pass across 5 Vitest files. They cover:
+- **Unit and integration tests:** 113 pass across 6 Vitest files. They cover:
   - solar maths versus astronomy-engine, polar cases and DST
   - time-zone conversions
   - Open-Meteo parsing and validation, the 400 fallback, 429 and network errors, missing fields
   - stale and fresh data, and interpolation without filling gaps
   - UV categories and ambient dose
-  - sleep arithmetic, the planner, the advisor and reminders, the recommendation rules
+  - sleep arithmetic, the advisor and reminders, the recommendation rules
+  - solar windows: elevation boundaries (exact to within 0.05°), seasonal thresholds, low-Sun and polar days, intensity-scaled UV wording, no blanket protection lines in low-UV windows, the duration-based plan check, and no invented UV when the forecast is missing
+  - Solar Philosophy integrity: every concept has three layers and resolvable sources, proponents are cited only through their own writings, there are no long quotations, every sky line carries a provenance label, and there are no measured-infrared or biological inferences
+  - Solar History grouping, subjective vs. environmental separation, the minimum sample before comparing windows, and priority/profile sanitising
   - statistics and experiments
   - storage persistence and corrupted data
   - CSV, JSON and ICS export
   - app shell integration, including the onboarding and network-failure states
-- **End-to-end:** 30 Playwright tests pass at five emulated viewports: iPhone SE, iPhone 15, iPhone landscape, iPad portrait and iPad landscape. They cover:
+- **End-to-end:** 45 Playwright tests pass at five emulated viewports: iPhone SE, iPhone 15, iPhone landscape, iPad portrait and iPad landscape. They cover:
   - every screen renders without horizontal overflow and with the right navigation
   - no JavaScript errors
   - provider failure shows explicit unavailable states
   - onboarding with coordinates
   - a journal entry persists across a reload and shows up in trends
   - the solar clock can be scrubbed with the keyboard
+  - the planner shows the three solar windows without the old blanket warnings, the lens persists, and the plan check works
+  - Solar Philosophy shows its three layers, live sky lines and the thinker filter
+  - the Solar History profile saves and no "safe" threshold appears anywhere
 - **Production build:** `npm run build` succeeds and generates the service worker.
 
 **Not verified here:**
 
 - **Live Open-Meteo responses.** The sandbox's network policy blocks `api.open-meteo.com`. The request format follows Open-Meteo's documented parameters, and responses were tested with fixtures that copy its JSON structure. On first use on a real device, confirm the Command Center shows "Updated just now" with a *Model estimate* badge. If the API ever rejects a variable, the app falls back automatically and lists what's missing in Settings → Data providers.
 - **Real Safari or WebKit.** Only Chromium was available, with iPhone and iPad emulated by viewport, pixel ratio and touch. Test on your own devices too, especially the Home Screen install, safe areas and GPS.
-- **Deployment.** No hosting credentials were available, so the app hasn't been deployed. Follow the steps above.
+- **Deployment.** The app deploys to GitHub Pages automatically on every push to `main`. The site itself can't be reached from the build sandbox, so check it on your device after each update.
 - **Knowledge library citations.** Entries marked *Not re-verified* in the source registry were entered from well-known references but weren't checked online in this build. For those, links go to PubMed title searches rather than DOIs I couldn't confirm.
 
 ---

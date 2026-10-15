@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ambientDose, uvBand } from './uv';
 import { bedtimeFor, forwardMinutes, gradualStep, plannedOpportunity, sleepMetrics, summarize } from './sleep';
-import { planWindows, nextOpportunity, heatNote } from './planner';
+import {
+  checkSession, currentOrNextWindow, heatSentence, planWindows, uvSentence, windowContext, windowKindAt, windowThreshold,
+} from './planner';
+import { formatClock, localMinutes } from './time/tz';
+import type { PriorityKey } from '../state/settings';
 import { computeSolarDay } from './astro/solar';
 import { parseForecast, FULL_VARS } from './data/openMeteo';
 import { makeForecastFixture } from '../test/fixtures';
@@ -80,45 +84,95 @@ describe('sleep calculations', () => {
   });
 });
 
-describe('outdoor window planner', () => {
+describe('context-aware solar windows', () => {
   const day = computeSolarDay({ year: 2026, month: 10, day: 15 }, ALMATY.lat, ALMATY.lon, ALMATY.tz);
   const snap = parseForecast(makeForecastFixture({ startUnix: START, uvScale: 9 }), FULL_VARS, 0);
+  const ctx = (priorities: PriorityKey[] = []) => ({
+    tz: ALMATY.tz, hour12: false, priorities, targetWake: '07:00', targetBedtime: '23:00', windDownMinutes: 60, day,
+    lat: ALMATY.lat, lon: ALMATY.lon, formatTime: (t: number) => formatClock(t, ALMATY.tz, false), localMinutes: (t: number) => localMinutes(t, ALMATY.tz),
+  });
 
-  it('creates morning/evening lower-UV windows around protect/minimise periods', () => {
+  it('divides daylight into morning, daytime and evening by calculated elevation', () => {
     const w = planWindows(day, snap.hourly, ALMATY.lat, ALMATY.lon);
-    expect(w[0].kind).toBe('morning-light');
-    expect(w[w.length - 1].kind).toBe('evening-light');
-    expect(w.some((x) => x.kind === 'protect')).toBe(true);
+    expect(w.map((x) => x.kind)).toEqual(['morning', 'daytime', 'evening']);
     expect(w[0].start).toBe(day.sunrise);
-    expect(w[w.length - 1].end).toBe(day.sunset);
-    for (const x of w) expect(x.notes.length).toBeGreaterThan(0);
-    // never labelled safe
-    expect(JSON.stringify(w).toLowerCase()).not.toContain('safe');
+    expect(w[2].end).toBe(day.sunset);
+    const th = windowThreshold(day.noonElevation);
+    expect(Math.abs(w[0].elevEnd - th)).toBeLessThan(0.05);
+    expect(Math.abs(w[2].elevStart - th)).toBeLessThan(0.05);
+    expect(w[0].end).toBe(w[1].start);
+    expect(w[1].elevPeak).toBeCloseTo(day.noonElevation!, 0);
+    expect(w[1].uv.peak!).toBeGreaterThan(w[0].uv.peak!);
   });
 
-  it('marks UV as unknown rather than guessing when the forecast is missing', () => {
-    const w = planWindows(day, null, ALMATY.lat, ALMATY.lon);
-    expect(w.map((x) => x.kind)).toContain('uv-unknown');
-    expect(w.every((x) => x.peakUv == null || x.peakUv === 0)).toBe(true);
-  });
-
-  it('returns no windows during polar night', () => {
+  it('adapts the threshold to the season and treats low-Sun days as one window', () => {
+    expect(windowThreshold(70)).toBe(30);
+    expect(windowThreshold(20)).toBe(12);
+    expect(windowThreshold(3)).toBe(6);
+    const winter = computeSolarDay({ year: 2026, month: 12, day: 21 }, 66.5, 25.7, 'Europe/Helsinki');
+    expect(planWindows(winter, null, 66.5, 25.7).map((x) => x.kind)).toEqual(['daytime']);
     const polar = computeSolarDay({ year: 2026, month: 12, day: 21 }, 69.65, 18.96, 'Europe/Oslo');
     expect(planWindows(polar, null, 69.65, 18.96)).toEqual([]);
   });
 
-  it('finds the next opportunity, skipping minimise periods', () => {
+  it('writes contextual lines from real values, without blanket commands', () => {
     const w = planWindows(day, snap.hourly, ALMATY.lat, ALMATY.lon);
-    const morning = nextOpportunity(w, day.sunrise! - 3600000);
-    expect(morning?.kind).toBe('morning-light');
-    const midday = nextOpportunity(w, day.solarNoon!);
-    expect(midday?.kind).toBe('evening-light');
+    const all = w.flatMap((x) => windowContext(x, ctx(['circadian', 'sleep', 'spectrum'])));
+    const text = all.map((l) => l.text).join(' ');
+    expect(text).toMatch(/Sunrise \d\d:\d\d/);
+    expect(text).toMatch(/07:00/); // relates to the planned wake time
+    expect(text).toMatch(/wind-down \(22:00\)/);
+    expect(text).toMatch(/air mass/);
+    expect(text.toLowerCase()).not.toContain('safe');
+    expect(text).not.toMatch(/Seek shade|Use sunscreen when|Protection required/);
+    // morning window with low UV mentions no protection at all
+    const morning = windowContext(w[0], ctx([])).map((l) => l.text).join(' ');
+    expect(morning).not.toMatch(/sunscreen|shade/i);
   });
 
-  it('flags heat using NWS-style bands', () => {
-    expect(heatNote(25)).toBeNull();
-    expect(heatNote(33)).toMatch(/32/);
-    expect(heatNote(40)).toMatch(/Dangerous/);
+  it('scales UV wording with intensity and always surfaces intense UV', () => {
+    expect(uvSentence(1.5, '12:00')!.weight).toBe('note');
+    expect(uvSentence(4.5, '12:00')!.text).toMatch(/time accumulates/);
+    expect(uvSentence(6.5, '12:00')!.weight).toBe('relevant');
+    const intense = uvSentence(9.2, '12:10')!;
+    expect(intense.weight).toBe('important');
+    expect(intense.text).toMatch(/9\.2.*12:10/);
+    const strong = parseForecast(makeForecastFixture({ startUnix: START, uvScale: 25 }), FULL_VARS, 0);
+    const mid = planWindows(day, strong.hourly, ALMATY.lat, ALMATY.lon)[1];
+    expect(windowContext(mid, ctx([])).some((l) => l.topic === 'uv' && l.weight === 'important')).toBe(true);
+  });
+
+  it('says when UV is unavailable instead of guessing', () => {
+    const w = planWindows(day, null, ALMATY.lat, ALMATY.lon);
+    expect(w.every((x) => !x.uv.known)).toBe(true);
+    expect(windowContext(w[1], ctx([])).find((l) => l.topic === 'uv')!.text).toMatch(/No UV forecast/);
+  });
+
+  it('describes heat proportionately', () => {
+    expect(heatSentence(25, false)).toBeNull();
+    expect(heatSentence(25, true)!.weight).toBe('note');
+    expect(heatSentence(33, false)!.weight).toBe('relevant');
+    expect(heatSentence(40, false)!.weight).toBe('important');
+  });
+
+  it('checks a planned session by duration using cumulative ambient UV', () => {
+    const noon = day.solarNoon!;
+    const short = checkSession(snap.hourly, noon, 15);
+    const long = checkSession(snap.hourly, noon - 2 * 3600000, 240);
+    expect(long.sed!).toBeGreaterThan(short.sed!);
+    expect(short.weight).toBe('note');
+    expect(long.weight).not.toBe('note');
+    expect(long.text).toMatch(/SED/);
+    expect(checkSession(null, noon, 30).sed).toBeNull();
+  });
+
+  it('finds the current or next window', () => {
+    const w = planWindows(day, snap.hourly, ALMATY.lat, ALMATY.lon);
+    expect(currentOrNextWindow(w, day.sunrise! - 3600000)?.kind).toBe('morning');
+    expect(currentOrNextWindow(w, day.solarNoon!)?.kind).toBe('daytime');
+    expect(currentOrNextWindow(w, day.sunset! + 1)).toBeNull();
+    expect(windowKindAt(day.solarNoon!, ALMATY.lat, ALMATY.lon, day)).toBe('daytime');
+    expect(windowKindAt(day.sunset! + 3600000, ALMATY.lat, ALMATY.lon, day)).toBeNull();
   });
 });
 
@@ -168,23 +222,42 @@ describe('recommendation engine', () => {
   });
 });
 
-describe('advisor', () => {
+describe('advisor (right now)', () => {
   const day = computeSolarDay({ year: 2026, month: 10, day: 15 }, ALMATY.lat, ALMATY.lon, ALMATY.tz);
-  const common = { day, targetWake: '07:00', targetBedtime: '23:00', windDownMinutes: 60, apparentTemp: 18 };
+  const fmt = (t: number) => formatClock(t, ALMATY.tz, false);
+  const common = { day, targetWake: '07:00', targetBedtime: '23:00', windDownMinutes: 60, apparentTemp: 18, formatTime: fmt };
   it('detects wind-down and sleep windows, including across midnight', () => {
     expect(currentAction({ ...common, nowMin: 22 * 60 + 15, phase: 'night', morning: false, elevation: -40, uv: null }).id).toBe('wind-down');
     expect(currentAction({ ...common, nowMin: 2 * 60, phase: 'night', morning: true, elevation: -50, uv: null }).id).toBe('sleep');
     expect(currentAction({ ...common, targetBedtime: '00:30', nowMin: 0, phase: 'night', morning: true, elevation: -50, uv: null }).id).toBe('wind-down');
   });
-  it('does not invent a UV number when UV is unavailable', () => {
-    const a = currentAction({ ...common, nowMin: 13 * 60, phase: 'day', morning: false, elevation: 50, uv: null });
-    expect(a.id).toBe('uv-unknown');
-    expect(a.title + a.detail + a.why).not.toMatch(/UV index ≈/);
+  it('describes the morning window with real sunrise, wake time and cloud', () => {
+    const a = currentAction({ ...common, now: day.sunrise! + 3600000, nowMin: 7 * 60 + 5, phase: 'day', morning: true, elevation: 10, uv: 0.8, cloud: 35 });
+    expect(a.id).toBe('morning-window');
+    expect(a.detail).toContain(`Sunrise was at ${fmt(day.sunrise!)}`);
+    expect(a.detail).toContain('07:00');
+    expect(a.detail).toContain('35%');
+    expect(a.facts).toContain('Cloud 35%');
   });
-  it('escalates protection with UV', () => {
-    expect(currentAction({ ...common, nowMin: 9 * 60, phase: 'day', morning: true, elevation: 20, uv: 1.2 }).id).toBe('morning-light');
-    expect(currentAction({ ...common, nowMin: 13 * 60, phase: 'day', morning: false, elevation: 45, uv: 5 }).id).toBe('uv-protect');
-    expect(currentAction({ ...common, nowMin: 13 * 60, phase: 'day', morning: false, elevation: 70, uv: 9 }).id).toBe('uv-very-high');
+  it('near solar noon, relates the UV peak to duration rather than commanding protection', () => {
+    const a = currentAction({ ...common, nowMin: 11 * 60 + 40, phase: 'day', morning: false, elevation: day.noonElevation! - 1, uv: 4.2, uvPeak: { uv: 4.5, t: day.solarNoon! } });
+    expect(a.id).toBe('midday');
+    expect(a.detail).toMatch(/daily maximum/);
+    expect(a.detail).toMatch(/4\.5/);
+    expect(a.detail).not.toMatch(/must|Seek shade/);
+    const intense = currentAction({ ...common, nowMin: 11 * 60 + 40, phase: 'day', morning: false, elevation: day.noonElevation! - 1, uv: 9, uvPeak: { uv: 9.4, t: day.solarNoon! } });
+    expect(intense.tone).toBe('protect');
+  });
+  it('in the evening, relates declining daylight to the target bedtime', () => {
+    const a = currentAction({ ...common, now: day.sunset! - 3600000, nowMin: 16 * 60 + 10, phase: 'day', morning: false, elevation: 8, uv: 0.4 });
+    expect(a.id).toBe('evening-window');
+    expect(a.detail).toMatch(/23:00/);
+    expect(a.detail).toMatch(/1 h 00 min away/);
+  });
+  it('does not invent a UV number when UV is unavailable', () => {
+    const a = currentAction({ ...common, nowMin: 13 * 60, phase: 'day', morning: false, elevation: day.noonElevation! - 1, uv: null });
+    expect(a.detail).toMatch(/No UV forecast/);
+    expect(a.facts.join(' ')).not.toMatch(/UV \d/);
   });
 });
 
