@@ -1,0 +1,124 @@
+/* TENGRI SOLAR design tokens — the Eternal Blue Sky palette.
+   Base palette is fixed; semantic tokens are remapped per theme. */
+:root {
+  /* palette */
+  --c-night: #060a18;
+  --c-night-2: #0a1128;
+  --c-eternal: #0d2357;
+  --c-lapis: #22408f;
+  --c-steppe: #3d8bd8;
+  --c-steppe-light: #9cc8ef;
+  --c-gold: #e0a43a;
+  --c-gold-soft: #f2c86e;
+  --c-bronze: #a8733a;
+  --c-amber: #d9822b;
+  --c-dawn: #f6c9a4;
+  --c-rose: #e6a3a0;
+  --c-zenith: #fbf6ea;
+  --c-ivory-2: #f2ecdc;
+  --c-grass: #6f7f4f;
+  --c-earth: #85663f;
+
+  /* data provenance */
+  --c-calc: #7fb2e5;
+  --c-model: #c9a24d;
+  --c-forecast: #b7a3e0;
+  --c-estimate: #e39a74;
+  --c-user: #8fc39a;
+  --c-stale: #d9822b;
+  --c-error: #e0675b;
+
+  /* type */
+  --font-display: 'Cormorant Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-sans: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.9375rem;
+  --fs-lg: 1.0625rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.875rem;
+  --fs-3xl: 2.75rem;
+  --fs-hero: clamp(3rem, 12vw, 5.25rem);
+
+  /* spacing & shape */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --tap: 44px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur: 380ms;
+  --tabbar-h: 64px;
+}
+
+/* ---------- Night (default dark) ---------- */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: var(--c-night);
+  --bg-2: var(--c-night-2);
+  --surface: rgba(18, 30, 66, 0.62);
+  --surface-solid: #101a3a;
+  --surface-2: rgba(30, 48, 98, 0.5);
+  --border: rgba(156, 200, 239, 0.16);
+  --border-strong: rgba(242, 200, 110, 0.38);
+  --text: #f4efe2;
+  --text-2: #c3c9dc;
+  --text-3: #8f98b4;
+  --accent: var(--c-gold-soft);
+  --accent-ink: #1a1408;
+  --link: #9cc8ef;
+  --focus: #f2c86e;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --grid: rgba(156, 200, 239, 0.12);
+}
+
+/* ---------- Day (light) ---------- */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4efe3;
+  --bg-2: #ebe3d0;
+  --surface: rgba(255, 252, 244, 0.82);
+  --surface-solid: #fffcf4;
+  --surface-2: rgba(232, 222, 198, 0.6);
+  --border: rgba(13, 35, 87, 0.14);
+  --border-strong: rgba(168, 115, 58, 0.45);
+  --text: #0c1a3d;
+  --text-2: #33405f;
+  --text-3: #5d6782;
+  --accent: #8f5a12;
+  --accent-ink: #fffaf0;
+  --link: #1f4fa3;
+  --focus: #b5761c;
+  --shadow: 0 8px 26px rgba(40, 32, 12, 0.12);
+  --grid: rgba(13, 35, 87, 0.1);
+  --c-calc: #2c6aa8;
+  --c-model: #8a6413;
+  --c-forecast: #6447a8;
+  --c-estimate: #a8532c;
+  --c-user: #3d7a4a;
+  --c-stale: #a85a12;
+  --c-error: #b23a2e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) {
+    --dur: 0ms;
+  }
+}
+:root[data-motion='reduce'] {
+  --dur: 0ms;
+}

@@ -1,0 +1,109 @@
+/**
+ * UV index interpretation following WHO "Global Solar UV Index: A Practical
+ * Guide" (2002). The UV index is an ENVIRONMENTAL quantity: erythemally
+ * weighted irradiance on a horizontal surface, 1 UVI = 25 mW/m².
+ */
+import { interpolate } from './data/series';
+
+export type UvCategory = 'low' | 'moderate' | 'high' | 'very-high' | 'extreme';
+
+export interface UvBand {
+  category: UvCategory;
+  label: string;
+  range: string;
+  color: string;
+  protection: string;
+  detail: string;
+}
+
+export const UV_BANDS: UvBand[] = [
+  {
+    category: 'low', label: 'Low', range: '0–2', color: '#4f9d69',
+    protection: 'Minimal protection usually needed',
+    detail:
+      'WHO: protection generally not required for most people. Snow, water and sand reflect UV; very fair skin, photosensitising medication and long exposure can still lead to burning.',
+  },
+  {
+    category: 'moderate', label: 'Moderate', range: '3–5', color: '#d9b43a',
+    protection: 'Protection required',
+    detail: 'WHO: seek shade during midday hours; cover up with clothing, wear a hat and UV-protective sunglasses, and apply sunscreen to exposed skin.',
+  },
+  {
+    category: 'high', label: 'High', range: '6–7', color: '#e07b2e',
+    protection: 'Protection required',
+    detail: 'WHO: seek shade during midday hours; shirt, hat, sunglasses and sunscreen. Unprotected skin can burn quickly.',
+  },
+  {
+    category: 'very-high', label: 'Very high', range: '8–10', color: '#c8463a',
+    protection: 'Extra protection',
+    detail: 'WHO: avoid being outside during midday hours; make sure you seek shade. Shirt, sunscreen, hat and sunglasses are a must.',
+  },
+  {
+    category: 'extreme', label: 'Extreme', range: '11+', color: '#8a4fb0',
+    protection: 'Extra protection',
+    detail: 'WHO: avoid being outside during midday hours; seek shade; full protection is essential. Unprotected skin can burn in minutes.',
+  },
+];
+
+export function uvBand(uvi: number): UvBand {
+  const r = Math.round(uvi);
+  if (r <= 2) return UV_BANDS[0];
+  if (r <= 5) return UV_BANDS[1];
+  if (r <= 7) return UV_BANDS[2];
+  if (r <= 10) return UV_BANDS[3];
+  return UV_BANDS[4];
+}
+
+/** Erythemally weighted irradiance (W/m²) for a UV index. */
+export function erythemalIrradiance(uvi: number): number {
+  return uvi * 0.025;
+}
+
+/** 1 Standard Erythema Dose = 100 J/m² erythemally weighted (CIE S 007). */
+export const SED_J_PER_M2 = 100;
+
+export interface AmbientDose {
+  /** Ambient erythemal radiant exposure on a horizontal plane, in SED. */
+  sed: number | null;
+  /** Fraction of the session covered by UV data (0–1). */
+  coverage: number;
+  peakUvi: number | null;
+  meanUvi: number | null;
+}
+
+/**
+ * Integrates the hourly UV index over a session to estimate the AMBIENT
+ * horizontal erythemal exposure. This is not a personal dose: posture, shade,
+ * clothing, sunscreen, reflection and orientation typically make personal
+ * exposure substantially different (usually lower) than ambient.
+ */
+export function ambientDose(times: number[], uv: (number | null)[], start: number, end: number): AmbientDose {
+  if (!(end > start)) return { sed: null, coverage: 0, peakUvi: null, meanUvi: null };
+  const step = 60000;
+  let joules = 0, covered = 0, peak: number | null = null, sum = 0, n = 0;
+  for (let t = start; t < end; t += step) {
+    const dt = Math.min(step, end - t);
+    const v = interpolate(times, uv, t + dt / 2);
+    if (v == null) continue;
+    joules += erythemalIrradiance(v) * (dt / 1000);
+    covered += dt;
+    sum += v; n++;
+    peak = peak == null ? v : Math.max(peak, v);
+  }
+  const coverage = covered / (end - start);
+  return {
+    sed: coverage > 0.9 ? joules / SED_J_PER_M2 : null,
+    coverage,
+    peakUvi: peak,
+    meanUvi: n ? sum / n : null,
+  };
+}
+
+export const UV_FACTORS = [
+  { factor: 'Time of day', effect: 'UV peaks around solar noon, when the Sun is highest and its rays cross the least atmosphere.' },
+  { factor: 'Season & latitude', effect: 'Higher Sun angles (summer, lower latitudes) mean more UV-B reaches the ground.' },
+  { factor: 'Elevation', effect: 'UV increases with altitude — WHO cites roughly 10% per 1000 m — because there is less atmosphere above you.' },
+  { factor: 'Ozone', effect: 'Stratospheric ozone absorbs UV-B; lower ozone columns raise the UV index.' },
+  { factor: 'Clouds', effect: 'Thick cloud reduces UV, but thin or broken cloud may transmit much of it and can briefly enhance it.' },
+  { factor: 'Reflection', effect: 'Fresh snow can reflect up to ~80% of UV; sand, water and concrete reflect less but still add exposure.' },
+];
